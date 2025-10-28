@@ -127,7 +127,7 @@ disclaimer = """
 
 def set_example_xray(example: list) -> dict:
     # Update the image component with the selected example
-    return gr.Image.update(value=example[0])
+    return gr.update(value=example[0])
 
 
 def set_example_text_input(example_text: list) -> dict:
