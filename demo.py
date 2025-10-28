@@ -109,55 +109,50 @@ def upload_img(gr_img, text_input, chat_state):
 #     else:
 #         chatbot.append({"role": "assistant", "content": llm_message})
 #     return chatbot, chat_state, img_list
-def gradio_ask(user_message, chatbot, chat_state):
-    from xraygpt.conversation.conversation import Conversation
+# ======================
+# demo.py (fixed version)
+# ======================
 
-    # Initialize chat_state if None (prevents AttributeError)
-    if chat_state is None:
+def gradio_ask(user_message, chat_state):
+    # --- Try to initialize Conversation safely for both old/new versions ---
+    try:
         chat_state = Conversation()
+    except TypeError:
+        # New version requires explicit arguments
+        chat_state = Conversation(
+            system="You are a helpful assistant specialized in medical imaging (X-ray analysis).",
+            roles=["human", "gpt"],
+            messages=[],
+            offset=0
+        )
 
-    # Validate input
-    if len(user_message.strip()) == 0:
-        return gr.update(interactive=True, placeholder='Input should not be empty!'), chatbot, chat_state
-
-    # Ask function - adds the user message to the conversation state
-    chat.ask(user_message, chat_state)
-
-    # Append user message and placeholder assistant message (to be filled by gradio_answer)
-    chatbot = chatbot + [
-        {"role": "user", "content": user_message},
-        {"role": "assistant", "content": "..."}
-    ]
-
-    return '', chatbot, chat_state
+    # --- Append user message ---
+    chat_state.messages.append([chat_state.roles[0], user_message])
+    return chat_state, chat_state.messages
 
 
-def gradio_answer(chatbot, chat_state, img_list, num_beams, temperature):
-    from xraygpt.conversation.conversation import Conversation
+def gradio_answer(chat_state):
+    # --- Safe initialization again in case chat_state was not passed ---
+    try:
+        if chat_state is None:
+            chat_state = Conversation()
+    except TypeError:
+        chat_state = Conversation(
+            system="You are a helpful assistant specialized in medical imaging (X-ray analysis).",
+            roles=["human", "gpt"],
+            messages=[],
+            offset=0
+        )
 
-    # Initialize chat_state if None (prevents AttributeError)
-    if chat_state is None:
-        chat_state = Conversation()
+    # --- Generate model response ---
+    input_text = chat_state.messages[-1][1]  # get latest user query
+    answer = model.chat(tokenizer, input_text, history=chat_state.messages)
 
-    # Generate LLM response
-    llm_message = chat.answer(
-        conv=chat_state,
-        img_list=img_list,
-        num_beams=num_beams,
-        temperature=temperature,
-        max_new_tokens=300,
-        max_length=2000,
-    )[0]
+    # --- Append model response ---
+    chat_state.messages.append([chat_state.roles[1], answer])
 
-    # Update the last assistant message content in the chatbot UI
-    for msg in reversed(chatbot):
-        if msg["role"] == "assistant":
-            msg["content"] = llm_message
-            break
-    else:
-        chatbot.append({"role": "assistant", "content": llm_message})
+    return answer, chat_state
 
-    return chatbot, chat_state, img_list
 
 title = """<h1 align="center">Demo of LTTS XrayGPT</h1>"""
 description = """<h3>Upload your X-Ray images and start asking queries!</h3>"""
