@@ -83,16 +83,63 @@ def upload_img(gr_img, text_input, chat_state):
     llm_message = chat.upload_img(gr_img, chat_state, img_list)
     return gr.update(interactive=False), gr.update(interactive=True, placeholder='Type and press Enter'), gr.update(value="Start Chatting", interactive=False), chat_state, img_list
 
+# def gradio_ask(user_message, chatbot, chat_state):
+#     if len(user_message) == 0:
+#         return gr.update(interactive=True, placeholder='Input should not be empty!'), chatbot, chat_state
+#     chat.ask(user_message, chat_state)
+#     # Append user message and placeholder assistant message (to be filled by gradio_answer)
+#     chatbot = chatbot + [{"role": "user", "content": user_message}, {"role": "assistant", "content": "..."}]
+#     return '', chatbot, chat_state
+
+
+# def gradio_answer(chatbot, chat_state, img_list, num_beams, temperature):
+#     llm_message = chat.answer(
+#         conv=chat_state,
+#         img_list=img_list,
+#         num_beams=num_beams,
+#         temperature=temperature,
+#         max_new_tokens=300,
+#         max_length=2000,
+#     )[0]
+#     # Update last assistant message content
+#     for msg in reversed(chatbot):
+#         if msg["role"] == "assistant":
+#             msg["content"] = llm_message
+#             break
+#     else:
+#         chatbot.append({"role": "assistant", "content": llm_message})
+#     return chatbot, chat_state, img_list
 def gradio_ask(user_message, chatbot, chat_state):
-    if len(user_message) == 0:
+    from xraygpt.conversation.conversation import Conversation
+
+    # Initialize chat_state if None (prevents AttributeError)
+    if chat_state is None:
+        chat_state = Conversation()
+
+    # Validate input
+    if len(user_message.strip()) == 0:
         return gr.update(interactive=True, placeholder='Input should not be empty!'), chatbot, chat_state
+
+    # Ask function - adds the user message to the conversation state
     chat.ask(user_message, chat_state)
+
     # Append user message and placeholder assistant message (to be filled by gradio_answer)
-    chatbot = chatbot + [{"role": "user", "content": user_message}, {"role": "assistant", "content": "..."}]
+    chatbot = chatbot + [
+        {"role": "user", "content": user_message},
+        {"role": "assistant", "content": "..."}
+    ]
+
     return '', chatbot, chat_state
 
 
 def gradio_answer(chatbot, chat_state, img_list, num_beams, temperature):
+    from xraygpt.conversation.conversation import Conversation
+
+    # Initialize chat_state if None (prevents AttributeError)
+    if chat_state is None:
+        chat_state = Conversation()
+
+    # Generate LLM response
     llm_message = chat.answer(
         conv=chat_state,
         img_list=img_list,
@@ -101,13 +148,15 @@ def gradio_answer(chatbot, chat_state, img_list, num_beams, temperature):
         max_new_tokens=300,
         max_length=2000,
     )[0]
-    # Update last assistant message content
+
+    # Update the last assistant message content in the chatbot UI
     for msg in reversed(chatbot):
         if msg["role"] == "assistant":
             msg["content"] = llm_message
             break
     else:
         chatbot.append({"role": "assistant", "content": llm_message})
+
     return chatbot, chat_state, img_list
 
 title = """<h1 align="center">Demo of LTTS XrayGPT</h1>"""
