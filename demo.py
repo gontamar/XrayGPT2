@@ -166,7 +166,7 @@ with gr.Blocks() as demo:
         with gr.Column():
             chat_state = gr.State()
             img_list = gr.State()
-            chatbot = gr.Chatbot(label='XrayGPT', type='messages')  # type='messages' expects dicts with role & content
+            chatbot = gr.Chatbot(label='XrayGPT')  # type='messages' expects dicts with role & content
             text_input = gr.Textbox(label='User', placeholder='Please upload your X-Ray image.', interactive=False)
 
 
